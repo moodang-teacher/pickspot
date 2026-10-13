@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10172e">
+  <meta name="description" content="PickSpot 전시회 작품 감상과 투표">
+  <title>PickSpot | 전시회 투표</title>
+  <link rel="icon" type="image/png" href="assets/pickspot_logo.png">
+  <link rel="apple-touch-icon" href="assets/pickspot_logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="brand.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="site-header">
+      <a class="brand" href="#/" aria-label="PickSpot 홈"><img class="brand-icon" src="assets/pickspot_logo.png" alt=""><span class="brand-name">PickSpot</span></a>
+      <nav class="top-nav" aria-label="주 메뉴">
+        <a href="#/">진행 중</a><a href="#/archive">지난 전시회</a>
+      </nav>
+      <button class="header-results" id="header-results" type="button" hidden>▥ <span>실시간 현황</span></button>
+    </header>
+    <main id="app" tabindex="-1"></main>
+    <footer class="site-footer"><span>아이디어를 쏘아, 트로피를 사냥하다.</span><a href="admin.html">巫堂先生</a></footer>
+  </div>
+  <div class="modal-backdrop" id="results-backdrop" hidden></div>
+  <section class="results-sheet" id="results-sheet" role="dialog" aria-modal="true" aria-labelledby="results-title" hidden>
+    <div class="sheet-grip"></div>
+    <div class="sheet-heading"><div><span class="eyebrow">VOTE BOARD</span><h2 id="results-title">개표 현황</h2></div><button class="icon-button" id="close-results" type="button" aria-label="결과 닫기">×</button></div>
+    <div id="results-content"></div>
+  </section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

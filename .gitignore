@@ -1,0 +1,22 @@
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+
+# Firebase CLI cache and logs
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+
+# Local dependencies and editor files
+node_modules/
+__pycache__/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
