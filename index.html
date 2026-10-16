@@ -21,13 +21,18 @@
       <button class="header-results" id="header-results" type="button" hidden>▥ <span>실시간 현황</span></button>
     </header>
     <main id="app" tabindex="-1"></main>
-    <footer class="site-footer"><span>아이디어를 쏘아, 트로피를 사냥하다.</span><a href="admin.html">巫堂先生</a></footer>
+    <footer class="site-footer"><span>당신의 선택이 빛나는 곳, PickSpot</span><a href="admin.html">巫堂先生</a></footer>
   </div>
   <div class="modal-backdrop" id="results-backdrop" hidden></div>
   <section class="results-sheet" id="results-sheet" role="dialog" aria-modal="true" aria-labelledby="results-title" hidden>
     <div class="sheet-grip"></div>
     <div class="sheet-heading"><div><span class="eyebrow">VOTE BOARD</span><h2 id="results-title">개표 현황</h2></div><button class="icon-button" id="close-results" type="button" aria-label="결과 닫기">×</button></div>
     <div id="results-content"></div>
+  </section>
+  <div class="poster-backdrop" id="poster-backdrop" hidden></div>
+  <section class="poster-dialog" id="poster-dialog" role="dialog" aria-modal="true" aria-labelledby="poster-title" hidden>
+    <header class="poster-dialog-header"><h2 id="poster-title"></h2><button id="close-poster" type="button" aria-label="작품 크게보기 닫기">×</button></header>
+    <div class="poster-dialog-body"><img id="poster-image" alt=""></div>
   </section>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="app.js"></script>
