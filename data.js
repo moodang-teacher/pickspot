@@ -6,6 +6,7 @@ const sdkVersion = "12.19.0";
 let firebase;
 
 const demoSeed = {
+  drafts: {},
   exhibitions: {
     "autumn-ideas": {
       title: "2026 가을 아이디어 전시회", description: "우리의 일상에서 발견한 작은 문제들. 학생들의 시선으로 그린 새로운 가능성을 만나보세요.",
@@ -75,6 +76,16 @@ export async function subscribeExhibitions(callback, onError) {
   const { db, dbSdk } = await getFirebase();
   return dbSdk.onValue(dbSdk.ref(db, "exhibitions"), snapshot => callback(snapshot.val() || {}), onError);
 }
+export async function subscribeManagedExhibitions(callback, onError) {
+  if (isDemo) return watchDemo(data => ({ ...data.exhibitions, ...data.drafts }), callback);
+  const { db, dbSdk } = await getFirebase();
+  let published = {};
+  let drafts = {};
+  const emit = () => callback({ ...published, ...drafts });
+  const unsubscribePublished = dbSdk.onValue(dbSdk.ref(db, "exhibitions"), snapshot => { published = snapshot.val() || {}; emit(); }, onError);
+  const unsubscribeDrafts = dbSdk.onValue(dbSdk.ref(db, "drafts"), snapshot => { drafts = snapshot.val() || {}; emit(); }, onError);
+  return () => { unsubscribePublished(); unsubscribeDrafts(); };
+}
 export async function subscribeVotes(exhibitionId, callback, onError) {
   if (isDemo) return watchDemo(data => data.voteCounts?.[exhibitionId] || {}, callback);
   const { db, dbSdk } = await getFirebase();
@@ -137,18 +148,52 @@ export async function signOutAdmin() {
 export async function createExhibition(exhibition) {
   if (isDemo) {
     const data = demoData();
-    const id = `expo-${Date.now().toString(36)}`;
-    data.exhibitions[id] = exhibition;
-    data.voteCounts[id] = Object.fromEntries(Object.keys(exhibition.works).map(key => [key, 0]));
+    const id = `expo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    if (exhibition.status === "draft") { data.drafts ||= {}; data.drafts[id] = exhibition; }
+    else data.exhibitions[id] = exhibition;
+    if (exhibition.status === "active") data.voteCounts[id] = Object.fromEntries(Object.keys(exhibition.works).map(key => [key, 0]));
     saveDemo(data);
     return id;
   }
   const { db, dbSdk } = await getFirebase();
   const id = dbSdk.push(dbSdk.ref(db, "exhibitions")).key;
-  const updates = { [`exhibitions/${id}`]: exhibition };
-  Object.keys(exhibition.works).forEach(key => { updates[`voteCounts/${id}/${key}`] = 0; });
+  const updates = { [`${exhibition.status === "draft" ? "drafts" : "exhibitions"}/${id}`]: exhibition };
+  if (exhibition.status === "active") Object.keys(exhibition.works).forEach(key => { updates[`voteCounts/${id}/${key}`] = 0; });
   await dbSdk.update(dbSdk.ref(db), updates);
   return id;
+}
+export async function updateExhibition(id, exhibition) {
+  if (isDemo) {
+    const data = demoData();
+    const previous = data.drafts?.[id] || data.exhibitions[id];
+    if (!previous) throw new Error("전시회를 찾을 수 없습니다.");
+    if (previous.status !== "draft" && exhibition.status !== previous.status) throw new Error("공개 상태를 변경할 수 없습니다.");
+    if (previous.status !== "draft" && Object.keys(previous.works || {}).some(key => !exhibition.works?.[key])) throw new Error("공개한 작품은 삭제할 수 없습니다.");
+    if (previous.status === "closed" && Object.keys(exhibition.works || {}).some(key => !previous.works?.[key])) throw new Error("종료된 전시회에는 작품을 추가할 수 없습니다.");
+    if (exhibition.status === "active") {
+      data.voteCounts[id] ||= {};
+      Object.keys(exhibition.works).forEach(key => { data.voteCounts[id][key] ??= 0; });
+    }
+    if (previous.status === "draft" && exhibition.status === "active") {
+      delete data.drafts[id];
+      data.exhibitions[id] = exhibition;
+    } else if (exhibition.status === "draft") data.drafts[id] = exhibition;
+    else data.exhibitions[id] = exhibition;
+    saveDemo(data);
+    return;
+  }
+  const { db, dbSdk } = await getFirebase();
+  const publishedSnapshot = await dbSdk.get(dbSdk.ref(db, `exhibitions/${id}`));
+  const previous = publishedSnapshot.val() || (await dbSdk.get(dbSdk.ref(db, `drafts/${id}`))).val();
+  if (!previous) throw new Error("전시회를 찾을 수 없습니다.");
+  if (previous.status !== "draft" && exhibition.status !== previous.status) throw new Error("공개 상태를 변경할 수 없습니다.");
+  if (previous.status !== "draft" && Object.keys(previous.works || {}).some(key => !exhibition.works?.[key])) throw new Error("공개한 작품은 삭제할 수 없습니다.");
+  if (previous.status === "closed" && Object.keys(exhibition.works || {}).some(key => !previous.works?.[key])) throw new Error("종료된 전시회에는 작품을 추가할 수 없습니다.");
+  const updates = previous.status === "draft" && exhibition.status === "active"
+    ? { [`drafts/${id}`]: null, [`exhibitions/${id}`]: exhibition }
+    : { [`${exhibition.status === "draft" ? "drafts" : "exhibitions"}/${id}`]: exhibition };
+  if (exhibition.status === "active") Object.keys(exhibition.works).filter(key => previous.status === "draft" || !previous.works?.[key]).forEach(key => { updates[`voteCounts/${id}/${key}`] = 0; });
+  await dbSdk.update(dbSdk.ref(db), updates);
 }
 export async function closeExhibition(id) {
   if (isDemo) {
