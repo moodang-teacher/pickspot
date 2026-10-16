@@ -39,6 +39,8 @@ python -m http.server 8000
 
 로컬에서 새 이미지를 바로 확인하려면 `python scripts/build_work_library.py`를 실행하고 관리자 화면을 새로고침합니다. GitHub Pages의 배포 소스는 저장소 설정에서 **main 브랜치의 /(root)**로 선택합니다. GitHub API가 일시적으로 작동하지 않을 때에는 `assets/works/index.json`을 대체 목록으로 사용합니다. 전시회에 사용 중인 이미지 파일을 삭제하거나 이름을 바꾸면 기존 전시회의 이미지도 보이지 않으므로 경로를 유지하세요.
 
+큰 작품 이미지를 추가한 뒤에는 `python -m pip install Pillow`(최초 1회), `python scripts/build_work_thumbnails.py`를 실행해 카드용 미리보기를 생성하고 원본 이미지와 함께 푸시하세요. 미리보기는 `assets/work-thumbs/`에 저장되며 원본은 수정하지 않습니다. 미리보기가 없는 작품은 원본 이미지를 표시합니다.
+
 ## MVP 범위
 
 - 전시회 중간저장, 공개, 수정, 종료, 여러 전시회 기록 보관

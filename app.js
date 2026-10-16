@@ -26,6 +26,14 @@ const safeImage = value => {
     return ["https:", "http:"].includes(url.protocol) ? url.href : "";
   } catch { return ""; }
 };
+const previewImage = original => {
+  if (!original) return "";
+  const url = new URL(original);
+  const worksRoot = new URL("assets/works/", location.href).pathname;
+  if (url.origin !== location.origin || !url.pathname.startsWith(worksRoot)) return original;
+  url.pathname = new URL("assets/work-thumbs/", location.href).pathname + url.pathname.slice(worksRoot.length) + ".thumb.webp";
+  return url.href;
+};
 const exhibitionEntries = () => Object.entries(state.exhibitions).filter(([, exhibition]) => ["active", "closed"].includes(exhibition.status)).sort((a, b) => (b[1].startsAt || 0) - (a[1].startsAt || 0));
 const current = () => state.exhibitions[state.exhibitionId];
 const works = exhibition => Object.entries(exhibition?.works || {}).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
@@ -86,7 +94,8 @@ function cardHtml(id, work, number, index, count, status, voted) {
   const focused = state.focused === id;
   const flipped = state.flipped === id;
   const imageUrl = safeImage(work.imageUrl);
-  return `<article class="work-card ${focused ? "focused" : ""} ${flipped ? "flipped" : ""}" style="--angle:${angle}deg;--compact-angle:${compactAngle}deg;--shift:${shift}px;--stack:${index + 1};--art-hue:${(number * 43) % 360}deg" data-card="${escapeHtml(id)}"><div class="card-inner"><div class="card-face card-front" ${flipped ? "inert" : ""}><button class="front-button" type="button" data-focus="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} ${focused ? "설명 펼치기" : "선택하기"}"><span class="card-topline"><span>PICKSPOT</span><b>${String(number).padStart(2, "0")}</b></span><span class="poster-art">${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy">` : ""}<span class="poster-symbol">✦</span></span><span class="card-caption"><strong>${escapeHtml(work.title)}</strong><small>${focused ? "한 번 더 터치하여 작품 보기 ↗" : "터치하여 펼치기 ↗"}</small></span></button></div><div class="card-face card-back" ${flipped ? "" : "inert"}><button class="card-back-content" type="button" data-unflip="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 앞면 보기"><span class="card-back-number">${String(number).padStart(2, "0")} / WORK</span><span class="card-back-title">${escapeHtml(work.title)}</span><span class="card-back-description">${escapeHtml(work.description)}</span><span class="card-back-hint">↶ 터치하여 앞면 보기</span></button><div class="card-back-actions">${status === "active" && !voted ? `<button class="vote-button" type="button" data-vote="${escapeHtml(id)}">이 작품에 투표하기 ↗</button>` : `<button class="vote-button muted" type="button" data-open-results>${status === "closed" ? "최종 결과 보기" : "실시간 결과 보기"} ↗</button>`}</div></div></div></article>`;
+  const previewUrl = previewImage(imageUrl);
+  return `<article class="work-card ${focused ? "focused" : ""} ${flipped ? "flipped" : ""}" style="--angle:${angle}deg;--compact-angle:${compactAngle}deg;--shift:${shift}px;--stack:${index + 1};--art-hue:${(number * 43) % 360}deg" data-card="${escapeHtml(id)}"><div class="card-inner"><div class="card-face card-front" ${flipped ? "inert" : ""}><button class="front-button" type="button" data-focus="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} ${focused ? "설명 펼치기" : "선택하기"}"><span class="card-topline"><span>PICKSPOT</span><b>${String(number).padStart(2, "0")}</b></span><span class="poster-art">${imageUrl ? `<img src="${escapeHtml(previewUrl)}" ${previewUrl !== imageUrl ? `data-original="${escapeHtml(imageUrl)}"` : ""} alt="" loading="eager" decoding="async" fetchpriority="${index === count - 1 ? "high" : "low"}">` : ""}<span class="poster-symbol">✦</span></span><span class="card-caption"><strong>${escapeHtml(work.title)}</strong><small>${focused ? "한 번 더 터치하여 작품 보기 ↗" : "터치하여 펼치기 ↗"}</small></span></button></div><div class="card-face card-back" ${flipped ? "" : "inert"}><button class="card-back-content" type="button" data-unflip="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 앞면 보기"><span class="card-back-number">${String(number).padStart(2, "0")} / WORK</span><span class="card-back-title">${escapeHtml(work.title)}</span><span class="card-back-description">${escapeHtml(work.description)}</span><span class="card-back-hint">↶ 터치하여 앞면 보기</span></button><div class="card-back-actions">${status === "active" && !voted ? `<button class="vote-button" type="button" data-vote="${escapeHtml(id)}">이 작품에 투표하기 ↗</button>` : `<button class="vote-button muted" type="button" data-open-results>${status === "closed" ? "최종 결과 보기" : "실시간 결과 보기"} ↗</button>`}</div></div></div></article>`;
 }
 function syncCardState(previousFocused = null) {
   const item = current();
@@ -180,6 +189,13 @@ app.addEventListener("transitionend", event => {
   const card = event.target.closest(".work-card.settling");
   if (card && event.target === card && event.propertyName === "transform" && !card.classList.contains("focused")) card.classList.remove("settling");
 });
+app.addEventListener("error", event => {
+  const image = event.target;
+  if (image instanceof HTMLImageElement && image.dataset.original) {
+    image.src = image.dataset.original;
+    delete image.dataset.original;
+  }
+}, true);
 app.addEventListener("pointerdown", event => {
   if (!event.target.closest(".card-stage")) return;
   swipeStart = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };

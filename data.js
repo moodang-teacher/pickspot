@@ -61,14 +61,21 @@ function watchDemo(read, callback) {
 }
 async function getFirebase() {
   if (firebase) return firebase;
-  const [appSdk, dbSdk, authSdk] = await Promise.all([
+  const [appSdk, dbSdk] = await Promise.all([
     import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-app.js`),
-    import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-database.js`),
-    import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-auth.js`)
+    import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-database.js`)
   ]);
   const app = appSdk.initializeApp(firebaseConfig);
-  firebase = { db: dbSdk.getDatabase(app), auth: authSdk.getAuth(app), dbSdk, authSdk };
+  firebase = { app, db: dbSdk.getDatabase(app), dbSdk };
   return firebase;
+}
+async function getFirebaseAuth() {
+  const service = await getFirebase();
+  if (!service.authSdk) {
+    service.authSdk = await import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-auth.js`);
+    service.auth = service.authSdk.getAuth(service.app);
+  }
+  return service;
 }
 
 export async function subscribeExhibitions(callback, onError) {
@@ -112,7 +119,7 @@ async function hasAdminRole(uid) {
 }
 export async function onAdminState(callback) {
   if (isDemo) { callback(null); return () => {}; }
-  const { auth, authSdk } = await getFirebase();
+  const { auth, authSdk } = await getFirebaseAuth();
   let revision = 0;
   const unsubscribe = authSdk.onAuthStateChanged(auth, async user => {
     const currentRevision = ++revision;
@@ -130,7 +137,7 @@ export async function onAdminState(callback) {
 }
 export async function signInAdmin(email, password) {
   if (isDemo) throw new Error("Firebase 프로젝트를 연결한 뒤 로그인할 수 있습니다.");
-  const { auth, authSdk } = await getFirebase();
+  const { auth, authSdk } = await getFirebaseAuth();
   const credential = await authSdk.signInWithEmailAndPassword(auth, email, password);
   let authorized;
   try { authorized = await hasAdminRole(credential.user.uid); }
@@ -142,7 +149,7 @@ export async function signInAdmin(email, password) {
 }
 export async function signOutAdmin() {
   if (isDemo) return;
-  const { auth, authSdk } = await getFirebase();
+  const { auth, authSdk } = await getFirebaseAuth();
   await authSdk.signOut(auth);
 }
 export async function createExhibition(exhibition) {
