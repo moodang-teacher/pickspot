@@ -47,14 +47,16 @@ const safeImage = value => {
     return ["https:", "http:"].includes(url.protocol) ? url.href : "";
   } catch { return ""; }
 };
-const previewImage = original => {
+const artworkVariant = (original, folder, suffix) => {
   if (!original) return "";
   const url = new URL(original);
   const worksRoot = new URL("assets/works/", location.href).pathname;
   if (url.origin !== location.origin || !url.pathname.startsWith(worksRoot)) return original;
-  url.pathname = new URL("assets/work-thumbs/", location.href).pathname + url.pathname.slice(worksRoot.length) + ".thumb.webp";
+  url.pathname = new URL(`assets/${folder}/`, location.href).pathname + url.pathname.slice(worksRoot.length) + suffix;
   return url.href;
 };
+const previewImage = original => artworkVariant(original, "work-thumbs", ".thumb.webp");
+const displayImage = original => artworkVariant(original, "work-display", ".display.webp");
 const exhibitionEntries = () => Object.entries(state.exhibitions).filter(([, exhibition]) => ["active", "closed"].includes(exhibition.status)).sort((a, b) => (b[1].startsAt || 0) - (a[1].startsAt || 0));
 const current = () => state.exhibitions[state.exhibitionId];
 const works = exhibition => Object.entries(exhibition?.works || {}).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
@@ -240,6 +242,8 @@ function showPoster(id, direction = 0) {
   posterId = id;
   selectCard(id);
   const original = safeImage(work?.imageUrl);
+  const preview = previewImage(original);
+  const display = displayImage(original);
   const revision = ++posterRevision;
   document.querySelector("#poster-title").textContent = work.title;
   document.querySelector("#poster-position").textContent = `${String(index + 1).padStart(2, "0")} / ${String(entries.length).padStart(2, "0")}`;
@@ -253,12 +257,17 @@ function showPoster(id, direction = 0) {
   posterImage.removeAttribute("src");
   posterImage.onerror = null;
   if (original) {
-    posterImage.onerror = () => { if (revision === posterRevision && posterImage.src !== original) posterImage.src = original; };
-    posterImage.src = previewImage(original);
-    if (posterImage.src !== original) {
+    posterImage.onerror = () => {
+      if (revision !== posterRevision) return;
+      if (posterImage.src !== display) posterImage.src = display;
+      else if (posterImage.src !== original) posterImage.src = original;
+    };
+    posterImage.src = preview;
+    if (display !== preview) {
       const fullImage = new Image();
-      fullImage.onload = () => { if (revision === posterRevision && !posterDialog.hidden) posterImage.src = original; };
-      fullImage.src = original;
+      fullImage.onload = () => { if (revision === posterRevision && !posterDialog.hidden) posterImage.src = display; };
+      fullImage.onerror = () => { if (revision === posterRevision && !posterDialog.hidden) posterImage.src = original; };
+      fullImage.src = display;
     }
   }
   if (outgoing) {
