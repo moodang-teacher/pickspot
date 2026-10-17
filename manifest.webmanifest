@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "PickSpot | 전시회 투표",
+  "short_name": "PickSpot",
+  "description": "전시회 작품을 감상하고 마음에 드는 아이디어에 투표하세요.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10172e",
+  "theme_color": "#10172e",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
