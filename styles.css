@@ -68,3 +68,10 @@ html{word-break:keep-all}
 .outline-button{width:300px;max-width:100%;justify-content:center}
 @media(max-width:780px){.outline-button{width:100%}}
 .update-banner{position:fixed;z-index:400;left:50%;bottom:24px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:13px 18px;border-radius:9px;background:#ffc72c;color:#10172e;box-shadow:0 12px 36px #0008;font-size:13px;font-weight:800;text-align:center}
+.poster-viewport{position:absolute;inset:12px;overflow:hidden;pointer-events:none;user-select:none;-webkit-user-select:none}
+.poster-viewport img{-webkit-user-drag:none}
+.poster-slide{position:absolute;inset:0;display:grid;place-items:center;transition:transform .38s cubic-bezier(.22,.8,.25,1);will-change:transform}
+.poster-slide img{grid-area:1/1;max-width:100%;max-height:100%;object-fit:contain}
+.poster-slide .poster-no-image{grid-area:1/1}
+@media(max-width:780px){.poster-viewport{inset:6px}}
+@media(prefers-reduced-motion:reduce){.poster-slide{transition:none}}

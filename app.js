@@ -8,6 +8,8 @@ const backdrop = document.querySelector("#results-backdrop");
 const resultsContent = document.querySelector("#results-content");
 const posterDialog = document.querySelector("#poster-dialog");
 const posterBackdrop = document.querySelector("#poster-backdrop");
+const posterViewport = document.querySelector("#poster-viewport");
+const posterSlide = document.querySelector("#poster-slide");
 const posterImage = document.querySelector("#poster-image");
 const posterVote = document.querySelector("#poster-vote");
 const voteConfirmDialog = document.querySelector("#vote-confirm-dialog");
@@ -26,6 +28,8 @@ let posterRevision = 0;
 let posterLastFocus = null;
 let posterId = null;
 let posterSwipeStart = null;
+let posterSlideFrame = null;
+let posterSlideTimer = null;
 let votingInProgress = false;
 let pendingVote = null;
 
@@ -184,11 +188,34 @@ function openPoster(id) {
   showPoster(id);
   document.querySelector("#close-poster").focus();
 }
-function showPoster(id) {
+function resetPosterSlide() {
+  if (posterSlideFrame !== null) cancelAnimationFrame(posterSlideFrame);
+  clearTimeout(posterSlideTimer);
+  posterSlideFrame = null;
+  posterSlideTimer = null;
+  posterViewport.querySelector(".poster-slide-outgoing")?.remove();
+  posterSlide.style.transition = "";
+  posterSlide.style.transform = "";
+}
+function showPoster(id, direction = 0) {
   const entries = works(current());
   const index = entries.findIndex(([workId]) => workId === id);
   if (index < 0) return;
   const work = entries[index][1];
+  resetPosterSlide();
+  const animate = direction && posterId && !posterDialog.hidden && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let outgoing;
+  if (animate) {
+    outgoing = posterSlide.cloneNode(true);
+    outgoing.removeAttribute("id");
+    outgoing.querySelectorAll("[id]").forEach(element => element.removeAttribute("id"));
+    outgoing.classList.add("poster-slide-outgoing");
+    outgoing.setAttribute("aria-hidden", "true");
+    posterViewport.prepend(outgoing);
+    posterSlide.style.transition = "none";
+    posterSlide.style.transform = `translateX(${direction * 100}%)`;
+    posterSlide.getBoundingClientRect();
+  }
   posterId = id;
   selectCard(id);
   const original = safeImage(work?.imageUrl);
@@ -204,24 +231,36 @@ function showPoster(id) {
   posterImage.alt = work.title;
   posterImage.removeAttribute("src");
   posterImage.onerror = null;
-  if (!original) return;
-  posterImage.onerror = () => { if (revision === posterRevision && posterImage.src !== original) posterImage.src = original; };
-  posterImage.src = previewImage(original);
-  if (posterImage.src !== original) {
-    const fullImage = new Image();
-    fullImage.onload = () => { if (revision === posterRevision && !posterDialog.hidden) posterImage.src = original; };
-    fullImage.src = original;
+  if (original) {
+    posterImage.onerror = () => { if (revision === posterRevision && posterImage.src !== original) posterImage.src = original; };
+    posterImage.src = previewImage(original);
+    if (posterImage.src !== original) {
+      const fullImage = new Image();
+      fullImage.onload = () => { if (revision === posterRevision && !posterDialog.hidden) posterImage.src = original; };
+      fullImage.src = original;
+    }
+  }
+  if (outgoing) {
+    posterSlide.style.transition = "";
+    posterSlideFrame = requestAnimationFrame(() => {
+      posterSlideFrame = null;
+      if (revision !== posterRevision || posterDialog.hidden) return;
+      outgoing.style.transform = `translateX(${-direction * 100}%)`;
+      posterSlide.style.transform = "translateX(0)";
+      posterSlideTimer = setTimeout(resetPosterSlide, 450);
+    });
   }
 }
 function stepPoster(direction) {
   const entries = works(current());
   if (entries.length < 2) return;
   const index = entries.findIndex(([id]) => id === posterId);
-  showPoster(entries[(index + direction + entries.length) % entries.length][0]);
+  showPoster(entries[(index + direction + entries.length) % entries.length][0], direction);
 }
 function closePoster() {
   if (posterDialog.hidden) return;
   const returnFocus = posterLastFocus?.isConnected ? posterLastFocus : [...resultsContent.querySelectorAll("[data-result-poster]")].find(row => row.dataset.resultPoster === posterId);
+  resetPosterSlide();
   posterRevision++;
   posterDialog.hidden = true;
   posterBackdrop.hidden = true;
