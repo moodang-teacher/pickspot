@@ -8,6 +8,7 @@ const resultsContent = document.querySelector("#results-content");
 const posterDialog = document.querySelector("#poster-dialog");
 const posterBackdrop = document.querySelector("#poster-backdrop");
 const posterImage = document.querySelector("#poster-image");
+const posterVote = document.querySelector("#poster-vote");
 const toast = document.querySelector("#toast");
 const state = { exhibitions: {}, votes: {}, exhibitionId: null, activeIndex: -1, focused: null, flipped: null, unsubscribeVotes: null, lastFocus: null };
 const sessionVotes = new Set();
@@ -20,6 +21,9 @@ let exhibitionsError = null;
 let routeRevision = 0;
 let posterRevision = 0;
 let posterLastFocus = null;
+let posterId = null;
+let posterSwipeStart = null;
+let votingInProgress = false;
 
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 const safeImage = value => {
@@ -130,11 +134,11 @@ function syncCardState(previousFocused = null) {
   });
   const entries = works(item);
   const position = app.querySelector(".work-position");
-  if (position && entries.length) {
-    position.querySelector("strong").textContent = state.activeIndex < 0 ? `전체 ${entries.length}개 작품` : `${String(state.activeIndex + 1).padStart(2, "0")} / ${String(entries.length).padStart(2, "0")}`;
-    position.querySelector("small").textContent = state.activeIndex < 0 ? "좌우로 넘겨보세요" : entries[state.activeIndex][1].title;
-    app.querySelector('[data-step="-1"]').disabled = state.activeIndex === 0;
-    app.querySelector('[data-step="1"]').disabled = state.activeIndex === entries.length - 1;
+  if (position) {
+    position.querySelector("strong").textContent = !entries.length ? "작품 0개" : state.activeIndex < 0 ? `전체 ${entries.length}개 작품` : `${String(state.activeIndex + 1).padStart(2, "0")} / ${String(entries.length).padStart(2, "0")}`;
+    position.querySelector("small").textContent = !entries.length ? "등록된 작품이 없습니다" : state.activeIndex < 0 ? "좌우로 넘겨보세요" : entries[state.activeIndex][1].title;
+    app.querySelector('[data-step="-1"]').disabled = entries.length < 2;
+    app.querySelector('[data-step="1"]').disabled = entries.length < 2;
   }
 }
 function selectCard(id, flipped = false) {
@@ -147,7 +151,7 @@ function selectCard(id, flipped = false) {
 function stepWork(direction) {
   const entries = works(current());
   if (!entries.length) return;
-  const nextIndex = state.activeIndex < 0 ? (direction > 0 ? 0 : entries.length - 1) : Math.max(0, Math.min(entries.length - 1, state.activeIndex + direction));
+  const nextIndex = state.activeIndex < 0 ? (direction > 0 ? 0 : entries.length - 1) : (state.activeIndex + direction + entries.length) % entries.length;
   if (nextIndex !== state.activeIndex || !state.focused) selectCard(entries[nextIndex][0]);
 }
 function renderResults() {
@@ -156,40 +160,72 @@ function renderResults() {
   const items = works(item).map(([id, work]) => ({ id, ...work, votes: Number(state.votes[id]) || 0 })).sort((a, b) => b.votes - a.votes || (a.order || 0) - (b.order || 0));
   const total = items.reduce((sum, work) => sum + work.votes, 0);
   resultsContent.innerHTML = `<div class="results-summary"><div><span>총 투표수</span><strong>${total.toLocaleString("ko-KR")}</strong></div><div><span>참여 작품</span><strong>${items.length}</strong></div><div><span>상태</span><strong class="summary-status">${item.status === "active" ? "진행 중" : "최종 결과"}</strong></div></div><div class="result-list">${items.map(work => { const percent = total ? Math.round(work.votes / total * 100) : 0; const imageUrl = safeImage(work.imageUrl); const previewUrl = previewImage(imageUrl); return `<div class="result-item"><div class="result-item-head"><span class="result-thumb">${imageUrl ? `<img src="${escapeHtml(previewUrl)}" ${previewUrl !== imageUrl ? `data-original="${escapeHtml(imageUrl)}"` : ""} alt="" loading="lazy" decoding="async">` : ""}</span><strong>${escapeHtml(work.title)}</strong><span class="result-votes">${work.votes}표</span></div><div class="result-track"><span style="width:${percent}%"></span></div><div class="result-percent">${percent}%</div></div>`; }).join("")}</div><p class="results-footnote">${item.status === "active" ? "투표 결과는 실시간으로 반영됩니다." : "종료된 전시회의 최종 기록입니다."}</p>`;
+  resultsContent.querySelectorAll(".result-item").forEach((row, index) => {
+    row.dataset.resultPoster = items[index].id;
+    row.tabIndex = 0;
+    row.setAttribute("role", "button");
+    row.setAttribute("aria-label", `${items[index].title} 작품 크게보기`);
+  });
   document.querySelector("#results-title").textContent = item.status === "active" ? "실시간 개표 현황" : "최종 투표 결과";
 }
 function openResults() { closePoster(); clearTimeout(closeTimer); state.lastFocus = document.activeElement; renderResults(); sheet.hidden = false; backdrop.hidden = false; requestAnimationFrame(() => { sheet.classList.add("open"); backdrop.classList.add("open"); document.querySelector("#close-results").focus(); }); document.body.classList.add("modal-open"); }
 function closeResults() { if (sheet.hidden) return; sheet.classList.remove("open"); backdrop.classList.remove("open"); document.body.classList.remove("modal-open"); clearTimeout(closeTimer); closeTimer = setTimeout(() => { sheet.hidden = true; backdrop.hidden = true; }, 260); state.lastFocus?.focus?.(); }
 function openPoster(id) {
   const work = current()?.works?.[id];
-  const original = safeImage(work?.imageUrl);
-  if (!original) return;
-  closeResults();
+  if (!work) return;
   posterLastFocus = document.activeElement;
-  const revision = ++posterRevision;
-  document.querySelector("#poster-title").textContent = work.title;
-  posterImage.alt = work.title;
-  posterImage.onerror = () => { if (revision === posterRevision && posterImage.src !== original) posterImage.src = original; };
-  posterImage.src = previewImage(original);
   posterDialog.hidden = false;
   posterBackdrop.hidden = false;
   document.body.classList.add("modal-open");
+  showPoster(id);
   document.querySelector("#close-poster").focus();
+}
+function showPoster(id) {
+  const entries = works(current());
+  const index = entries.findIndex(([workId]) => workId === id);
+  if (index < 0) return;
+  const work = entries[index][1];
+  posterId = id;
+  selectCard(id);
+  const original = safeImage(work?.imageUrl);
+  const revision = ++posterRevision;
+  document.querySelector("#poster-title").textContent = work.title;
+  document.querySelector("#poster-position").textContent = `${String(index + 1).padStart(2, "0")} / ${String(entries.length).padStart(2, "0")}`;
+  document.querySelector("#poster-prev").disabled = entries.length < 2;
+  document.querySelector("#poster-next").disabled = entries.length < 2;
+  posterVote.disabled = votingInProgress || current().status !== "active" || hasVoted(state.exhibitionId);
+  posterVote.textContent = current().status !== "active" ? "투표가 종료되었습니다" : hasVoted(state.exhibitionId) ? "투표 완료" : "투표하기";
+  document.querySelector("#poster-no-image").hidden = Boolean(original);
+  posterImage.hidden = !original;
+  posterImage.alt = work.title;
+  posterImage.removeAttribute("src");
+  posterImage.onerror = null;
+  if (!original) return;
+  posterImage.onerror = () => { if (revision === posterRevision && posterImage.src !== original) posterImage.src = original; };
+  posterImage.src = previewImage(original);
   if (posterImage.src !== original) {
     const fullImage = new Image();
     fullImage.onload = () => { if (revision === posterRevision && !posterDialog.hidden) posterImage.src = original; };
     fullImage.src = original;
   }
 }
+function stepPoster(direction) {
+  const entries = works(current());
+  if (entries.length < 2) return;
+  const index = entries.findIndex(([id]) => id === posterId);
+  showPoster(entries[(index + direction + entries.length) % entries.length][0]);
+}
 function closePoster() {
   if (posterDialog.hidden) return;
+  const returnFocus = posterLastFocus?.isConnected ? posterLastFocus : [...resultsContent.querySelectorAll("[data-result-poster]")].find(row => row.dataset.resultPoster === posterId);
   posterRevision++;
   posterDialog.hidden = true;
   posterBackdrop.hidden = true;
   posterImage.onerror = null;
   posterImage.removeAttribute("src");
+  posterId = null;
   if (!sheet.classList.contains("open")) document.body.classList.remove("modal-open");
-  posterLastFocus?.focus?.();
+  returnFocus?.focus?.();
 }
 async function switchRoute() {
   closeResults();
@@ -227,16 +263,34 @@ app.addEventListener("click", async event => {
   if (unflip) { selectCard(unflip.dataset.unflip); return; }
   const voteButton = event.target.closest("[data-vote]");
   if (voteButton) {
-    const id = state.exhibitionId;
-    if (!id || current()?.status !== "active" || hasVoted(id)) { notify("이 전시회의 투표에 이미 참여했거나 투표가 종료되었습니다."); return; }
-    voteButton.disabled = true; voteButton.textContent = "투표를 반영하고 있습니다…";
-    try { await voteFor(id, voteButton.dataset.vote); sessionVotes.add(id); let stored = true; try { localStorage.setItem(voteKey(id), voteButton.dataset.vote); } catch { stored = false; } render(); openResults(); notify(stored ? "투표가 완료되었습니다. 감사합니다!" : "투표는 완료되었지만 이 브라우저에 참여 기록을 저장하지 못했습니다."); }
-    catch (error) { voteButton.disabled = false; voteButton.textContent = "이 작품에 투표하기 ↗"; notify(`투표하지 못했습니다: ${error.message}`); }
+    await submitVote(voteButton.dataset.vote, voteButton);
     return;
   }
   if (event.target.closest("[data-open-results]")) { openResults(); return; }
   if (state.focused && event.target.closest(".exhibition-page") && !event.target.closest(".work-card, button, a")) selectCard(null);
 });
+async function submitVote(workId, button) {
+  const id = state.exhibitionId;
+  if (votingInProgress) return;
+  if (!id || current()?.status !== "active" || hasVoted(id)) { notify("이 전시회의 투표에 이미 참여했거나 투표가 종료되었습니다."); return; }
+  votingInProgress = true;
+  const originalLabel = button.textContent;
+  button.disabled = true; button.textContent = "투표를 반영하고 있습니다…";
+  try {
+    await voteFor(id, workId);
+    sessionVotes.add(id);
+    let stored = true;
+    try { localStorage.setItem(voteKey(id), workId); } catch { stored = false; }
+    render(); openResults();
+    notify(stored ? "투표가 완료되었습니다. 감사합니다!" : "투표는 완료되었지만 이 브라우저에 참여 기록을 저장하지 못했습니다.");
+  } catch (error) {
+    button.disabled = false; button.textContent = originalLabel;
+    notify(`투표하지 못했습니다: ${error.message}`);
+  } finally {
+    votingInProgress = false;
+    if (!posterDialog.hidden && posterId) showPoster(posterId);
+  }
+}
 app.addEventListener("transitionend", event => {
   const card = event.target.closest(".work-card.settling");
   if (card && event.target === card && event.propertyName === "transform" && !card.classList.contains("focused")) card.classList.remove("settling");
@@ -267,12 +321,39 @@ document.addEventListener("pointercancel", () => { swipeStart = null; });
 headerResults.addEventListener("click", openResults);
 document.querySelector("#close-results").addEventListener("click", closeResults);
 backdrop.addEventListener("click", closeResults);
+resultsContent.addEventListener("click", event => {
+  const row = event.target.closest("[data-result-poster]");
+  if (row) openPoster(row.dataset.resultPoster);
+});
+resultsContent.addEventListener("keydown", event => {
+  if (!["Enter", " "].includes(event.key)) return;
+  const row = event.target.closest("[data-result-poster]");
+  if (row) { event.preventDefault(); openPoster(row.dataset.resultPoster); }
+});
 document.querySelector("#close-poster").addEventListener("click", closePoster);
 posterBackdrop.addEventListener("click", closePoster);
+document.querySelector("#poster-prev").addEventListener("click", () => stepPoster(-1));
+document.querySelector("#poster-next").addEventListener("click", () => stepPoster(1));
+posterVote.addEventListener("click", () => { if (posterId) submitVote(posterId, posterVote); });
+document.querySelector("#poster-swipe-area").addEventListener("pointerdown", event => { posterSwipeStart = { x: event.clientX, y: event.clientY, pointerId: event.pointerId }; });
+document.addEventListener("pointerup", event => {
+  if (!posterSwipeStart || posterSwipeStart.pointerId !== event.pointerId) return;
+  const dx = event.clientX - posterSwipeStart.x;
+  const dy = event.clientY - posterSwipeStart.y;
+  posterSwipeStart = null;
+  if (!posterDialog.hidden && Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.25) stepPoster(dx < 0 ? 1 : -1);
+});
+document.addEventListener("pointercancel", () => { posterSwipeStart = null; });
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !posterDialog.hidden) closePoster();
   else if (event.key === "Escape" && !sheet.hidden) closeResults();
-  if (event.key === "Tab" && !posterDialog.hidden) { event.preventDefault(); document.querySelector("#close-poster").focus(); }
+  if (!posterDialog.hidden && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); stepPoster(event.key === "ArrowRight" ? 1 : -1); }
+  if (event.key === "Tab" && !posterDialog.hidden) {
+    const controls = [...posterDialog.querySelectorAll("button:not(:disabled)")];
+    const index = controls.indexOf(document.activeElement);
+    if (event.shiftKey && index <= 0) { event.preventDefault(); controls.at(-1).focus(); }
+    else if (!event.shiftKey && (index === -1 || index === controls.length - 1)) { event.preventDefault(); controls[0].focus(); }
+  }
 });
 window.addEventListener("hashchange", switchRoute);
 
