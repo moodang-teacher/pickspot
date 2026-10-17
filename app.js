@@ -104,7 +104,7 @@ function renderExhibition(id) {
   const note = item.status === "closed" ? "투표가 종료되었습니다. 작품과 최종 결과를 둘러보세요." : voted ? "이 전시회에 투표했습니다. 실시간 결과를 확인해보세요." : "";
   app.innerHTML = `<div class="exhibition-page"><div class="exhibition-top"><a class="back-link" href="#/">${icon("arrow-left")} 전시회 목록</a><div class="exhibition-kicker">${tag(item.status, entries.length)}</div><h1>${escapeHtml(item.title)}</h1><p>${escapeHtml(item.description)}</p>${note ? `<div class="exhibition-note">${note}</div>` : ""}</div>
   <section class="gallery" aria-label="전시 작품"><div class="gallery-heading"><span class="eyebrow gold">THE WORKS</span><span>전체 ${entries.length}개 작품</span></div><div class="card-stage" aria-label="작품 카드 덱">${entries.map(([workId, work], index) => cardHtml(workId, work, index + 1, index, entries.length, item.status, voted)).join("")}</div><div class="gallery-controls work-navigation"><button type="button" data-step="-1" aria-label="이전 작품">${icon("arrow-left")}</button><span class="work-position" aria-live="polite"><strong></strong><small></small></span><button type="button" data-step="1" aria-label="다음 작품">${icon("arrow-right")}</button></div></section>
-  <div class="exhibition-bottom"><span>모든 아이디어에는 발견해 줄 한 사람이 필요합니다.</span><button type="button" class="outline-button" data-open-results>${item.status === "closed" ? "최종 결과 보기" : "실시간 개표 보기"} ${icon("chart-column-increasing")}</button></div></div>`;
+  <div class="exhibition-bottom"><button type="button" class="outline-button" data-open-results>${item.status === "closed" ? "최종 결과 보기" : "실시간 개표 보기"} ${icon("chart-column-increasing")}</button></div></div>`;
   syncCardState();
 }
 function cardHtml(id, work, number, index, count, status, voted) {
