@@ -23,6 +23,7 @@ let swipeStart = null;
 let ignoreClickUntil = 0;
 let exhibitionsLoaded = false;
 let exhibitionsError = null;
+let routeInitialized = false;
 let routeRevision = 0;
 let posterRevision = 0;
 let posterLastFocus = null;
@@ -57,7 +58,8 @@ const previewImage = original => {
 const exhibitionEntries = () => Object.entries(state.exhibitions).filter(([, exhibition]) => ["active", "closed"].includes(exhibition.status)).sort((a, b) => (b[1].startsAt || 0) - (a[1].startsAt || 0));
 const current = () => state.exhibitions[state.exhibitionId];
 const works = exhibition => Object.entries(exhibition?.works || {}).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
-const dateLabel = timestamp => timestamp ? new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(timestamp) : "";
+const dateFormatter = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+const dateLabel = timestamp => timestamp ? dateFormatter.format(timestamp) : "";
 const voteKey = id => `hasVoted:${id}:${state.exhibitions[id]?.voteResetAt || 0}`;
 const hasVoted = id => { const key = voteKey(id); if (sessionVotes.has(key)) return true; try { return Boolean(localStorage.getItem(key)); } catch { return false; } };
 const tag = (status, count) => `<span class="status-pill ${status}">${icon(status === "active" ? "circle-dot" : "circle-check")}${status === "active" ? "투표 진행 중" : "전시 종료"}</span><span class="work-count">작품 ${count}점</span>`;
@@ -81,7 +83,7 @@ function render() {
 function renderHome() {
   const active = exhibitionEntries().filter(([, item]) => item.status === "active");
   const closed = exhibitionEntries().filter(([, item]) => item.status === "closed");
-  app.innerHTML = `<section class="home-hero"><img class="hero-logo" src="assets/pickspot_logo_big.png" alt="" aria-hidden="true"><div class="hero-content"><div class="eyebrow gold">PICKSPOT · EXHIBITION VOTE</div><h1>당신의 한 표가<br><em>아이디어의 다음 장</em>을 엽니다.</h1><p>작품을 살펴보고 마음을 움직인 아이디어에 투표해주세요.</p></div><div class="hero-number" aria-hidden="true">01<span> / VOTE</span></div></section>
+  app.innerHTML = `<section class="home-hero"><img class="hero-logo" src="assets/pickspot_logo_big.webp" width="860" height="860" alt="" aria-hidden="true" decoding="async"><div class="hero-content"><div class="eyebrow gold">PICKSPOT · EXHIBITION VOTE</div><h1>당신의 한 표가<br><em>아이디어의 다음 장</em>을 엽니다.</h1><p>작품을 살펴보고 마음을 움직인 아이디어에 투표해주세요.</p></div><div class="hero-number" aria-hidden="true">01<span> / VOTE</span></div></section>
   ${isDemo ? `<div class="demo-banner"><strong>샘플 데이터 체험 중</strong><span>Firebase를 연결하면 여러 기기에서 같은 전시회와 투표 결과를 공유할 수 있습니다.</span></div>` : ""}
   <section class="section-block"><div class="section-heading"><div><span class="eyebrow">NOW OPEN</span><h2>진행 중인 전시회</h2></div><span class="section-counter">${String(active.length).padStart(2, "0")}</span></div>${active.length ? `<div class="exhibition-grid">${active.map(exhibitionTile).join("")}</div>` : `<div class="empty-state">현재 진행 중인 전시회가 없습니다.<br>지난 전시회의 결과를 둘러보세요.</div>`}</section>
   <section class="section-block archive-teaser"><div class="section-heading"><div><span class="eyebrow">ARCHIVE</span><h2>지난 전시회</h2></div><a class="text-link" href="#/archive">모두 보기 ${icon("arrow-up-right")}</a></div>${closed.length ? `<div class="archive-row-list">${closed.slice(0, 2).map(archiveRow).join("")}</div>` : `<div class="empty-state">아직 종료된 전시회가 없습니다.</div>`}</section>`;
@@ -175,6 +177,25 @@ function renderResults() {
     row.setAttribute("aria-label", `${items[index].title} 작품 크게보기`);
   });
   document.querySelector("#results-title").textContent = item.status === "active" ? "실시간 개표 현황" : "최종 투표 결과";
+}
+function updateResults() {
+  const item = current();
+  const list = resultsContent.querySelector(".result-list");
+  if (!item || !list) return;
+  const items = works(item).map(([id, work]) => ({ id, work, votes: Number(state.votes[id]) || 0 }))
+    .sort((a, b) => b.votes - a.votes || (a.work.order || 0) - (b.work.order || 0));
+  const rows = new Map([...list.children].map(row => [row.dataset.resultPoster, row]));
+  if (rows.size !== items.length || items.some(({ id }) => !rows.has(id))) { renderResults(); return; }
+  const total = items.reduce((sum, { votes }) => sum + votes, 0);
+  resultsContent.querySelector(".results-summary strong").textContent = total.toLocaleString("ko-KR");
+  items.forEach(({ id, votes }, index) => {
+    const row = rows.get(id);
+    const percent = total ? Math.round(votes / total * 100) : 0;
+    row.querySelector(".result-votes").textContent = `${votes}표`;
+    row.querySelector(".result-track span").style.width = `${percent}%`;
+    row.querySelector(".result-percent").textContent = `${percent}%`;
+    if (list.children[index] !== row) list.insertBefore(row, list.children[index]);
+  });
 }
 function openResults() { closePoster(); clearTimeout(closeTimer); state.lastFocus = document.activeElement; renderResults(); sheet.hidden = false; backdrop.hidden = false; requestAnimationFrame(() => { sheet.classList.add("open"); backdrop.classList.add("open"); document.querySelector("#close-results").focus(); }); document.body.classList.add("modal-open"); }
 function closeResults() { if (sheet.hidden) return; sheet.classList.remove("open"); backdrop.classList.remove("open"); document.body.classList.remove("modal-open"); clearTimeout(closeTimer); closeTimer = setTimeout(() => { sheet.hidden = true; backdrop.hidden = true; }, 260); state.lastFocus?.focus?.(); }
@@ -304,7 +325,7 @@ async function switchRoute() {
     state.exhibitionId = id; state.votes = {}; state.activeIndex = -1; state.focused = null; state.flipped = null;
     if (id) {
       try {
-        const unsubscribe = await subscribeVotes(id, votes => { if (revision === routeRevision && state.exhibitionId === id) { state.votes = votes; if (!sheet.hidden) renderResults(); } }, error => notify(`결과를 불러오지 못했습니다: ${error.message}`));
+        const unsubscribe = await subscribeVotes(id, votes => { if (revision === routeRevision && state.exhibitionId === id) { state.votes = votes; if (!sheet.hidden) updateResults(); } }, error => notify(`결과를 불러오지 못했습니다: ${error.message}`));
         if (revision !== routeRevision) { unsubscribe(); return; }
         state.unsubscribeVotes = unsubscribe;
       }
@@ -442,6 +463,7 @@ window.addEventListener("hashchange", switchRoute);
 
 app.innerHTML = `<div class="loading-state">전시회를 불러오고 있습니다…</div>`;
 try {
-  await subscribeExhibitions(exhibitions => { state.exhibitions = exhibitions; exhibitionsLoaded = true; exhibitionsError = null; render(); }, error => { exhibitionsError = error; render(); notify(error.message); });
+  await subscribeExhibitions(exhibitions => { state.exhibitions = exhibitions; exhibitionsLoaded = true; exhibitionsError = null; if (routeInitialized) render(); }, error => { exhibitionsError = error; if (routeInitialized) render(); notify(error.message); });
   await switchRoute();
+  routeInitialized = true;
 } catch (error) { exhibitionsError = error; render(); notify(error.message); }

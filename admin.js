@@ -14,8 +14,17 @@ let editingId = null;
 let busy = false;
 
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+const thumbnail = path => path.startsWith("assets/works/") ? `assets/work-thumbs/${path.slice("assets/works/".length)}.thumb.webp` : path;
 const announce = text => { message.textContent = text; };
 const shareUrl = id => new URL(`index.html#/e/${encodeURIComponent(id)}`, location.href).href;
+
+document.addEventListener("error", event => {
+  const image = event.target;
+  if (image instanceof HTMLImageElement && image.dataset.original) {
+    image.src = image.dataset.original;
+    delete image.dataset.original;
+  }
+}, true);
 
 function addWork(work = {}, workId = "") {
   const row = document.createElement("div");
@@ -36,6 +45,7 @@ function addWork(work = {}, workId = "") {
   row.querySelector(".choose-image").addEventListener("click", event => {
     const panel = row.querySelector(".image-library");
     panel.hidden = !panel.hidden;
+    if (!panel.hidden && panel.dataset.loaded !== "true") renderImageLibrary(row);
     event.currentTarget.setAttribute("aria-expanded", String(!panel.hidden));
   });
   row.querySelector(".image-library").addEventListener("click", event => {
@@ -54,18 +64,18 @@ function addWork(work = {}, workId = "") {
     row.querySelector(".selected-image").textContent = "선택한 이미지 없음";
   });
   fields.append(row);
-  renderImageLibrary(row);
 }
 
 function showSelectedImage(row, path) {
   const name = imageLibrary.find(image => image.path === path)?.name || decodeURIComponent(path.split("/").pop());
-  row.querySelector(".selected-image").innerHTML = `<img src="${escapeHtml(path)}" alt=""><span>${escapeHtml(name)}</span><button class="clear-image" type="button" aria-label="이미지 선택 취소">${icon("x")}</button>`;
+  row.querySelector(".selected-image").innerHTML = `<img src="${escapeHtml(thumbnail(path))}" data-original="${escapeHtml(path)}" alt="" decoding="async"><span>${escapeHtml(name)}</span><button class="clear-image" type="button" aria-label="이미지 선택 취소">${icon("x")}</button>`;
 }
 
 function renderImageLibrary(row) {
   const panel = row.querySelector(".image-library");
+  panel.dataset.loaded = "true";
   panel.innerHTML = imageLibrary.length
-    ? `<div class="image-library-grid">${imageLibrary.map((image, index) => `<button type="button" data-image-index="${index}" title="${escapeHtml(image.name)}"><img src="${escapeHtml(image.path)}" alt=""><span>${escapeHtml(image.name)}</span></button>`).join("")}</div>`
+    ? `<div class="image-library-grid">${imageLibrary.map((image, index) => `<button type="button" data-image-index="${index}" title="${escapeHtml(image.name)}"><img src="${escapeHtml(thumbnail(image.path))}" data-original="${escapeHtml(image.path)}" alt="" loading="lazy" decoding="async"><span>${escapeHtml(image.name)}</span></button>`).join("")}</div>`
     : `<p>등록된 이미지가 없습니다. <code>assets/works/</code>에 이미지를 넣고 라이브러리 목록을 생성해주세요.</p>`;
 }
 
@@ -92,7 +102,7 @@ async function loadImageLibrary() {
       imageLibrary = Array.isArray(data.images) ? data.images.filter(image => typeof image.path === "string" && image.path.startsWith("assets/works/") && typeof image.name === "string") : [];
     }
   } catch (error) { announce(`이미지 라이브러리를 불러오지 못했습니다: ${error.message}`); }
-  [...fields.children].forEach(renderImageLibrary);
+  [...fields.children].filter(row => !row.querySelector(".image-library").hidden).forEach(renderImageLibrary);
 }
 
 function renderList() {
