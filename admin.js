@@ -113,6 +113,7 @@ function resetEditor() {
   document.querySelector("#save-exhibition use").setAttribute("href", "assets/lucide-icons.svg#arrow-up-right");
   document.querySelector("#add-work").disabled = false;
   document.querySelector("#cancel-edit").hidden = true;
+  document.dispatchEvent(new Event("pickspot:editor-clean"));
 }
 
 function editExhibition(id) {

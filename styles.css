@@ -67,3 +67,4 @@ html{word-break:keep-all}
 .exhibition-bottom{justify-content:center}
 .outline-button{width:300px;max-width:100%;justify-content:center}
 @media(max-width:780px){.outline-button{width:100%}}
+.update-banner{position:fixed;z-index:400;left:50%;bottom:24px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:13px 18px;border-radius:9px;background:#ffc72c;color:#10172e;box-shadow:0 12px 36px #0008;font-size:13px;font-weight:800;text-align:center}

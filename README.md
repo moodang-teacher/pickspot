@@ -62,9 +62,11 @@ python -m http.server 8000
 
 ## 로고 사용 기준
 
-- `assets/pickspot_logo.png`: PWA 아이콘 원본, 파비콘, 모바일 화면과 좁은 영역의 로고. 현재 헤더와 파비콘에 사용합니다.
+- `assets/pickspot_logo.png`: 홈 화면 아이콘 원본과 화면 안의 로고. 현재 헤더에 사용합니다.
 - `assets/pickspot_logo_big.png`: 넓은 영역의 로고. 현재 데스크톱 첫 화면의 큰 로고에 사용합니다.
 
-PWA를 추가할 때 아이콘은 `pickspot_logo.png`를 원본으로 사용합니다.
+홈 화면 아이콘은 `python scripts/build_app_icons.py`로 다시 생성합니다. `manifest.webmanifest`와 `apple-touch-icon.png`가 설치 아이콘과 실행 방식을 지정합니다.
+
+GitHub Pages는 배포할 때마다 `version.json`에 현재 커밋 번호를 채웁니다. `update.js`는 화면이 열려 있거나 다시 보일 때 버전을 확인하고, 변경을 감지하면 안내 문구를 보여준 뒤 자동으로 새 버전을 엽니다. `sw.js`는 화면과 코드 파일을 항상 네트워크에서 새로 받아오게 합니다. 투표와 실시간 데이터에는 인터넷 연결이 필요하며 오프라인 투표는 지원하지 않습니다. 로컬의 단순 HTTP 서버에서는 `version.json`의 Jekyll 템플릿이 처리되지 않으므로 업데이트 확인만 건너뜁니다.
 
 Firebase 웹 SDK는 공식 CDN의 모듈을 사용합니다. 네트워크 접속이 필요한 것은 Firebase 연결 상태에서만이며, 데모 모드는 별도 설치 없이 실행됩니다.
