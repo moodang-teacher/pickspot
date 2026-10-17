@@ -52,3 +52,14 @@ html{word-break:keep-all}
 .vote-confirm-actions button{flex:1;padding:12px;border:1px solid #c9ced4;border-radius:7px;background:#fff;color:#263653;font-size:14px;font-weight:800}
 #confirm-vote{border-color:#ffc72c;background:#ffc72c;color:#10172e}
 .vote-confirm-actions button:focus-visible{outline:2px solid #1b2741;outline-offset:2px}
+.lucide-icon{display:inline-block;flex:none;width:1em;height:1em;vertical-align:-.12em;color:inherit}
+.header-results,.status-pill,.text-link,.row-action,.back-link,.view-poster,.card-back-hint,.vote-button,.outline-button,.poster-vote-button{display:inline-flex;align-items:center;gap:6px}
+.header-results .lucide-icon{width:17px;height:17px}
+.status-pill .lucide-icon{width:12px;height:12px}
+.round-arrow .lucide-icon{width:17px;height:17px}
+.gallery-controls button,.poster-arrow,.icon-button,.poster-dialog-header button{display:grid;place-items:center}
+.gallery-controls .lucide-icon,.poster-arrow .lucide-icon{width:19px;height:19px}
+.icon-button .lucide-icon,.poster-dialog-header button .lucide-icon{width:18px;height:18px}
+.vote-button,.poster-vote-button{justify-content:center}
+.vote-button .lucide-icon,.poster-vote-button .lucide-icon{width:15px;height:15px}
+.card-back-hint .lucide-icon{width:13px;height:13px}

@@ -1,4 +1,5 @@
 import { isDemo, onAdminState, signInAdmin, signOutAdmin, subscribeManagedExhibitions, createExhibition, updateExhibition, closeExhibition } from "./data.js";
+import { icon } from "./icons.js";
 
 const loginPanel = document.querySelector("#login-panel");
 const workspace = document.querySelector("#admin-workspace");
@@ -58,7 +59,7 @@ function addWork(work = {}, workId = "") {
 
 function showSelectedImage(row, path) {
   const name = imageLibrary.find(image => image.path === path)?.name || decodeURIComponent(path.split("/").pop());
-  row.querySelector(".selected-image").innerHTML = `<img src="${escapeHtml(path)}" alt=""><span>${escapeHtml(name)}</span><button class="clear-image" type="button" aria-label="이미지 선택 취소">×</button>`;
+  row.querySelector(".selected-image").innerHTML = `<img src="${escapeHtml(path)}" alt=""><span>${escapeHtml(name)}</span><button class="clear-image" type="button" aria-label="이미지 선택 취소">${icon("x")}</button>`;
 }
 
 function renderImageLibrary(row) {
@@ -96,7 +97,7 @@ async function loadImageLibrary() {
 
 function renderList() {
   const entries = Object.entries(exhibitions).sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
-  list.innerHTML = entries.length ? entries.map(([id, item]) => `<div class="admin-event"><div class="admin-event-main"><span class="status-pill ${item.status}">${item.status === "draft" ? "◌ 중간저장" : item.status === "active" ? "● 투표 진행 중" : "◆ 전시 종료"}</span><strong>${escapeHtml(item.title || "제목 없는 전시회")}</strong><small>작품 ${Object.keys(item.works || {}).length}점 · ${new Intl.DateTimeFormat("ko-KR").format(item.startsAt || item.createdAt || Date.now())}</small></div><div class="admin-event-actions"><button type="button" data-edit="${escapeHtml(id)}">수정</button>${item.status !== "draft" ? `<a href="${shareUrl(id)}" target="_blank" rel="noopener">화면 열기 ↗</a><button type="button" data-copy="${escapeHtml(id)}">주소 복사</button>` : ""}${item.status === "active" ? `<button type="button" data-close="${escapeHtml(id)}">투표 종료</button>` : ""}</div></div>`).join("") : `<div class="admin-empty">아직 만든 전시회가 없습니다.</div>`;
+  list.innerHTML = entries.length ? entries.map(([id, item]) => `<div class="admin-event"><div class="admin-event-main"><span class="status-pill ${item.status}">${icon(item.status === "draft" ? "circle-dashed" : item.status === "active" ? "circle-dot" : "circle-check")}${item.status === "draft" ? "중간저장" : item.status === "active" ? "투표 진행 중" : "전시 종료"}</span><strong>${escapeHtml(item.title || "제목 없는 전시회")}</strong><small>작품 ${Object.keys(item.works || {}).length}점 · ${new Intl.DateTimeFormat("ko-KR").format(item.startsAt || item.createdAt || Date.now())}</small></div><div class="admin-event-actions"><button type="button" data-edit="${escapeHtml(id)}">${icon("pencil")} 수정</button>${item.status !== "draft" ? `<a href="${shareUrl(id)}" target="_blank" rel="noopener">화면 열기 ${icon("arrow-up-right")}</a><button type="button" data-copy="${escapeHtml(id)}">${icon("copy")} 주소 복사</button>` : ""}${item.status === "active" ? `<button type="button" data-close="${escapeHtml(id)}">투표 종료</button>` : ""}</div></div>`).join("") : `<div class="admin-empty">아직 만든 전시회가 없습니다.</div>`;
 }
 
 function resetEditor() {
@@ -108,7 +109,8 @@ function resetEditor() {
   document.querySelector("#editor-heading").textContent = "새 전시회 만들기";
   document.querySelector("#editor-hint").textContent = "작품 이미지는 라이브러리에서 선택합니다. 중간저장한 초안은 관람객에게 보이지 않습니다.";
   document.querySelector("#save-draft").hidden = false;
-  document.querySelector("#save-exhibition").textContent = "전시회 열기 ↗";
+  document.querySelector("#save-exhibition .button-label").textContent = "전시회 열기";
+  document.querySelector("#save-exhibition use").setAttribute("href", "assets/lucide-icons.svg#arrow-up-right");
   document.querySelector("#add-work").disabled = false;
   document.querySelector("#cancel-edit").hidden = true;
 }
@@ -126,7 +128,8 @@ function editExhibition(id) {
   document.querySelector("#editor-heading").textContent = item.status === "draft" ? "중간저장한 전시회 이어서 만들기" : "전시회 수정";
   document.querySelector("#editor-hint").textContent = item.status === "draft" ? "중간저장한 내용은 관람객에게 보이지 않습니다. 준비되면 전시회를 열어주세요." : "공개한 작품은 투표 기록을 위해 삭제할 수 없습니다. 제목, 설명, 이미지는 수정할 수 있습니다.";
   document.querySelector("#save-draft").hidden = item.status !== "draft";
-  document.querySelector("#save-exhibition").textContent = item.status === "draft" ? "전시회 열기 ↗" : "변경사항 저장";
+  document.querySelector("#save-exhibition .button-label").textContent = item.status === "draft" ? "전시회 열기" : "변경사항 저장";
+  document.querySelector("#save-exhibition use").setAttribute("href", `assets/lucide-icons.svg#${item.status === "draft" ? "arrow-up-right" : "circle-check"}`);
   document.querySelector("#add-work").disabled = item.status === "closed";
   document.querySelector("#cancel-edit").hidden = false;
   document.querySelector("#editor-panel").scrollIntoView({ behavior: "smooth", block: "start" });

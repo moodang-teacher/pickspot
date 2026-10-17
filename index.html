@@ -18,7 +18,7 @@
       <nav class="top-nav" aria-label="주 메뉴">
         <a href="#/">진행 중</a><a href="#/archive">지난 전시회</a>
       </nav>
-      <button class="header-results" id="header-results" type="button" hidden>▥ <span>실시간 현황</span></button>
+      <button class="header-results" id="header-results" type="button" hidden><svg class="lucide-icon" aria-hidden="true" focusable="false"><use href="assets/lucide-icons.svg#chart-column-increasing"></use></svg><span>실시간 현황</span></button>
     </header>
     <main id="app" tabindex="-1"></main>
     <footer class="site-footer"><span>당신의 선택이 빛나는 곳, PickSpot</span><a href="admin.html">巫堂先生</a></footer>
@@ -26,14 +26,14 @@
   <div class="modal-backdrop" id="results-backdrop" hidden></div>
   <section class="results-sheet" id="results-sheet" role="dialog" aria-modal="true" aria-labelledby="results-title" hidden>
     <div class="sheet-grip"></div>
-    <div class="sheet-heading"><div><span class="eyebrow">VOTE BOARD</span><h2 id="results-title">개표 현황</h2></div><button class="icon-button" id="close-results" type="button" aria-label="결과 닫기">×</button></div>
+    <div class="sheet-heading"><div><span class="eyebrow">VOTE BOARD</span><h2 id="results-title">개표 현황</h2></div><button class="icon-button" id="close-results" type="button" aria-label="결과 닫기"><svg class="lucide-icon" aria-hidden="true" focusable="false"><use href="assets/lucide-icons.svg#x"></use></svg></button></div>
     <div id="results-content"></div>
   </section>
   <div class="poster-backdrop" id="poster-backdrop" hidden></div>
   <section class="poster-dialog" id="poster-dialog" role="dialog" aria-modal="true" aria-labelledby="poster-title" hidden>
-    <header class="poster-dialog-header"><h2 id="poster-title"></h2><button id="close-poster" type="button" aria-label="작품 크게보기 닫기">×</button></header>
-    <div class="poster-dialog-body" id="poster-swipe-area"><button class="poster-arrow" id="poster-prev" type="button" aria-label="이전 작품">←</button><img id="poster-image" alt=""><span class="poster-no-image" id="poster-no-image" hidden>등록된 작품 이미지가 없습니다.</span><button class="poster-arrow" id="poster-next" type="button" aria-label="다음 작품">→</button></div>
-    <footer class="poster-dialog-footer"><span id="poster-position" aria-live="polite"></span><button class="poster-vote-button" id="poster-vote" type="button">투표하기</button></footer>
+    <header class="poster-dialog-header"><h2 id="poster-title"></h2><button id="close-poster" type="button" aria-label="작품 크게보기 닫기"><svg class="lucide-icon" aria-hidden="true" focusable="false"><use href="assets/lucide-icons.svg#x"></use></svg></button></header>
+    <div class="poster-dialog-body" id="poster-swipe-area"><button class="poster-arrow" id="poster-prev" type="button" aria-label="이전 작품"><svg class="lucide-icon" aria-hidden="true" focusable="false"><use href="assets/lucide-icons.svg#arrow-left"></use></svg></button><img id="poster-image" alt=""><span class="poster-no-image" id="poster-no-image" hidden>등록된 작품 이미지가 없습니다.</span><button class="poster-arrow" id="poster-next" type="button" aria-label="다음 작품"><svg class="lucide-icon" aria-hidden="true" focusable="false"><use href="assets/lucide-icons.svg#arrow-right"></use></svg></button></div>
+    <footer class="poster-dialog-footer"><span id="poster-position" aria-live="polite"></span><button class="poster-vote-button" id="poster-vote" type="button"><svg class="lucide-icon" aria-hidden="true" focusable="false"><use href="assets/lucide-icons.svg#vote"></use></svg><span class="button-label">투표하기</span></button></footer>
   </section>
   <div class="vote-confirm-backdrop" id="vote-confirm-backdrop" hidden></div>
   <section class="vote-confirm-dialog" id="vote-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="vote-confirm-title" hidden>

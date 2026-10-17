@@ -1,4 +1,5 @@
 import { isDemo, subscribeExhibitions, subscribeVotes, voteFor } from "./data.js";
+import { icon } from "./icons.js";
 
 const app = document.querySelector("#app");
 const headerResults = document.querySelector("#header-results");
@@ -55,7 +56,7 @@ const works = exhibition => Object.entries(exhibition?.works || {}).sort((a, b) 
 const dateLabel = timestamp => timestamp ? new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(timestamp) : "";
 const voteKey = id => `hasVoted:${id}:${state.exhibitions[id]?.voteResetAt || 0}`;
 const hasVoted = id => { const key = voteKey(id); if (sessionVotes.has(key)) return true; try { return Boolean(localStorage.getItem(key)); } catch { return false; } };
-const tag = (status, count) => `<span class="status-pill ${status}">${status === "active" ? "● 투표 진행 중" : "◆ 전시 종료"}</span><span class="work-count">작품 ${count}점</span>`;
+const tag = (status, count) => `<span class="status-pill ${status}">${icon(status === "active" ? "circle-dot" : "circle-check")}${status === "active" ? "투표 진행 중" : "전시 종료"}</span><span class="work-count">작품 ${count}점</span>`;
 
 function notify(message) { toast.textContent = message; toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("show"), 3600); }
 function route() {
@@ -79,16 +80,16 @@ function renderHome() {
   app.innerHTML = `<section class="home-hero"><img class="hero-logo" src="assets/pickspot_logo_big.png" alt="" aria-hidden="true"><div class="hero-content"><div class="eyebrow gold">PICKSPOT · EXHIBITION VOTE</div><h1>당신의 한 표가<br><em>아이디어의 다음 장</em>을 엽니다.</h1><p>작품을 살펴보고 마음을 움직인 아이디어에 투표해주세요.</p></div><div class="hero-number" aria-hidden="true">01<span> / VOTE</span></div></section>
   ${isDemo ? `<div class="demo-banner"><strong>샘플 데이터 체험 중</strong><span>Firebase를 연결하면 여러 기기에서 같은 전시회와 투표 결과를 공유할 수 있습니다.</span></div>` : ""}
   <section class="section-block"><div class="section-heading"><div><span class="eyebrow">NOW OPEN</span><h2>진행 중인 전시회</h2></div><span class="section-counter">${String(active.length).padStart(2, "0")}</span></div>${active.length ? `<div class="exhibition-grid">${active.map(exhibitionTile).join("")}</div>` : `<div class="empty-state">현재 진행 중인 전시회가 없습니다.<br>지난 전시회의 결과를 둘러보세요.</div>`}</section>
-  <section class="section-block archive-teaser"><div class="section-heading"><div><span class="eyebrow">ARCHIVE</span><h2>지난 전시회</h2></div><a class="text-link" href="#/archive">모두 보기 ↗</a></div>${closed.length ? `<div class="archive-row-list">${closed.slice(0, 2).map(archiveRow).join("")}</div>` : `<div class="empty-state">아직 종료된 전시회가 없습니다.</div>`}</section>`;
+  <section class="section-block archive-teaser"><div class="section-heading"><div><span class="eyebrow">ARCHIVE</span><h2>지난 전시회</h2></div><a class="text-link" href="#/archive">모두 보기 ${icon("arrow-up-right")}</a></div>${closed.length ? `<div class="archive-row-list">${closed.slice(0, 2).map(archiveRow).join("")}</div>` : `<div class="empty-state">아직 종료된 전시회가 없습니다.</div>`}</section>`;
 }
 function exhibitionTile([id, item]) {
   const entries = works(item);
   const imageUrl = safeImage(entries[0]?.[1].imageUrl);
   const previewUrl = previewImage(imageUrl);
-  return `<a class="exhibition-tile" href="#/e/${encodeURIComponent(id)}"><div class="tile-art" aria-hidden="true">${imageUrl ? `<img src="${escapeHtml(previewUrl)}" ${previewUrl !== imageUrl ? `data-original="${escapeHtml(imageUrl)}"` : ""} alt="" loading="lazy" decoding="async">` : ""}</div><div class="tile-content"><div class="tile-meta">${tag(item.status, entries.length)}</div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description)}</p><div class="tile-bottom"><span>${dateLabel(item.startsAt)} 시작</span><span class="round-arrow">↗</span></div></div></a>`;
+  return `<a class="exhibition-tile" href="#/e/${encodeURIComponent(id)}"><div class="tile-art" aria-hidden="true">${imageUrl ? `<img src="${escapeHtml(previewUrl)}" ${previewUrl !== imageUrl ? `data-original="${escapeHtml(imageUrl)}"` : ""} alt="" loading="lazy" decoding="async">` : ""}</div><div class="tile-content"><div class="tile-meta">${tag(item.status, entries.length)}</div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description)}</p><div class="tile-bottom"><span>${dateLabel(item.startsAt)} 시작</span><span class="round-arrow">${icon("arrow-up-right")}</span></div></div></a>`;
 }
 function archiveRow([id, item], index) {
-  return `<a class="archive-row" href="#/e/${encodeURIComponent(id)}"><span class="row-index">${String(index + 1).padStart(2, "0")}</span><span class="row-title">${escapeHtml(item.title)}<small>${dateLabel(item.endsAt || item.startsAt)} · 작품 ${works(item).length}점</small></span><span class="row-action">결과 보기 ↗</span></a>`;
+  return `<a class="archive-row" href="#/e/${encodeURIComponent(id)}"><span class="row-index">${String(index + 1).padStart(2, "0")}</span><span class="row-title">${escapeHtml(item.title)}<small>${dateLabel(item.endsAt || item.startsAt)} · 작품 ${works(item).length}점</small></span><span class="row-action">결과 보기 ${icon("arrow-up-right")}</span></a>`;
 }
 function renderArchive() {
   const closed = exhibitionEntries().filter(([, item]) => item.status === "closed");
@@ -96,14 +97,14 @@ function renderArchive() {
 }
 function renderExhibition(id) {
   const item = state.exhibitions[id];
-  if (!item || !["active", "closed"].includes(item.status)) { app.innerHTML = `<section class="missing-state"><h1>전시회를 찾을 수 없습니다.</h1><a class="primary-button" href="#/">홈으로 돌아가기 ↗</a></section>`; return; }
+  if (!item || !["active", "closed"].includes(item.status)) { app.innerHTML = `<section class="missing-state"><h1>전시회를 찾을 수 없습니다.</h1><a class="primary-button" href="#/">홈으로 돌아가기 ${icon("arrow-up-right")}</a></section>`; return; }
   const entries = works(item);
   if (state.activeIndex >= 0) state.activeIndex = Math.min(state.activeIndex, Math.max(entries.length - 1, 0));
   const voted = hasVoted(id);
   const note = item.status === "closed" ? "투표가 종료되었습니다. 작품과 최종 결과를 둘러보세요." : voted ? "이 전시회에 투표했습니다. 실시간 결과를 확인해보세요." : "";
-  app.innerHTML = `<div class="exhibition-page"><div class="exhibition-top"><a class="back-link" href="#/">← 전시회 목록</a><div class="exhibition-kicker">${tag(item.status, entries.length)}</div><h1>${escapeHtml(item.title)}</h1><p>${escapeHtml(item.description)}</p>${note ? `<div class="exhibition-note">${note}</div>` : ""}</div>
-  <section class="gallery" aria-label="전시 작품"><div class="gallery-heading"><span class="eyebrow gold">THE WORKS</span><span>전체 ${entries.length}개 작품</span></div><div class="card-stage" aria-label="작품 카드 덱">${entries.map(([workId, work], index) => cardHtml(workId, work, index + 1, index, entries.length, item.status, voted)).join("")}</div><div class="gallery-controls work-navigation"><button type="button" data-step="-1" aria-label="이전 작품">←</button><span class="work-position" aria-live="polite"><strong></strong><small></small></span><button type="button" data-step="1" aria-label="다음 작품">→</button></div></section>
-  <div class="exhibition-bottom"><span>모든 아이디어에는 발견해 줄 한 사람이 필요합니다.</span><button type="button" class="outline-button" data-open-results>${item.status === "closed" ? "최종 결과 보기" : "실시간 개표 보기"} ↗</button></div></div>`;
+  app.innerHTML = `<div class="exhibition-page"><div class="exhibition-top"><a class="back-link" href="#/">${icon("arrow-left")} 전시회 목록</a><div class="exhibition-kicker">${tag(item.status, entries.length)}</div><h1>${escapeHtml(item.title)}</h1><p>${escapeHtml(item.description)}</p>${note ? `<div class="exhibition-note">${note}</div>` : ""}</div>
+  <section class="gallery" aria-label="전시 작품"><div class="gallery-heading"><span class="eyebrow gold">THE WORKS</span><span>전체 ${entries.length}개 작품</span></div><div class="card-stage" aria-label="작품 카드 덱">${entries.map(([workId, work], index) => cardHtml(workId, work, index + 1, index, entries.length, item.status, voted)).join("")}</div><div class="gallery-controls work-navigation"><button type="button" data-step="-1" aria-label="이전 작품">${icon("arrow-left")}</button><span class="work-position" aria-live="polite"><strong></strong><small></small></span><button type="button" data-step="1" aria-label="다음 작품">${icon("arrow-right")}</button></div></section>
+  <div class="exhibition-bottom"><span>모든 아이디어에는 발견해 줄 한 사람이 필요합니다.</span><button type="button" class="outline-button" data-open-results>${item.status === "closed" ? "최종 결과 보기" : "실시간 개표 보기"} ${icon("chart-column-increasing")}</button></div></div>`;
   syncCardState();
 }
 function cardHtml(id, work, number, index, count, status, voted) {
@@ -115,7 +116,7 @@ function cardHtml(id, work, number, index, count, status, voted) {
   const flipped = state.flipped === id;
   const imageUrl = safeImage(work.imageUrl);
   const previewUrl = previewImage(imageUrl);
-  return `<article class="work-card ${focused ? "focused" : ""} ${flipped ? "flipped" : ""}" style="--angle:${angle}deg;--compact-angle:${compactAngle}deg;--shift:${shift}px;--stack:${index + 1}" data-card="${escapeHtml(id)}"><div class="card-inner"><div class="card-face card-front" ${flipped ? "inert" : ""}><button class="front-button" type="button" data-focus="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 설명 보기"><span class="card-topline"><span>PICKSPOT</span><b>${String(number).padStart(2, "0")}</b></span><span class="poster-art">${imageUrl ? `<img src="${escapeHtml(previewUrl)}" ${previewUrl !== imageUrl ? `data-original="${escapeHtml(imageUrl)}"` : ""} alt="" loading="eager" decoding="async" fetchpriority="${index === count - 1 ? "high" : "low"}">` : ""}</span><span class="card-caption"><strong>${escapeHtml(work.title)}</strong></span></button>${imageUrl ? `<button class="view-poster" type="button" data-view-poster="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 작품 크게보기">작품 크게보기 ↗</button>` : ""}</div><div class="card-face card-back" ${flipped ? "" : "inert"}><button class="card-back-content" type="button" data-unflip="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 앞면 보기"><span class="card-back-number">${String(number).padStart(2, "0")} / WORK</span><span class="card-back-title">${escapeHtml(work.title)}</span><span class="card-back-description">${escapeHtml(work.description)}</span><span class="card-back-hint">↶ 터치하여 앞면 보기</span></button><div class="card-back-actions">${status === "active" && !voted ? `<button class="vote-button" type="button" data-vote="${escapeHtml(id)}">이 작품에 투표하기 ↗</button>` : `<button class="vote-button muted" type="button" data-open-results>${status === "closed" ? "최종 결과 보기" : "실시간 결과 보기"} ↗</button>`}</div></div></div></article>`;
+  return `<article class="work-card ${focused ? "focused" : ""} ${flipped ? "flipped" : ""}" style="--angle:${angle}deg;--compact-angle:${compactAngle}deg;--shift:${shift}px;--stack:${index + 1}" data-card="${escapeHtml(id)}"><div class="card-inner"><div class="card-face card-front" ${flipped ? "inert" : ""}><button class="front-button" type="button" data-focus="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 설명 보기"><span class="card-topline"><span>PICKSPOT</span><b>${String(number).padStart(2, "0")}</b></span><span class="poster-art">${imageUrl ? `<img src="${escapeHtml(previewUrl)}" ${previewUrl !== imageUrl ? `data-original="${escapeHtml(imageUrl)}"` : ""} alt="" loading="eager" decoding="async" fetchpriority="${index === count - 1 ? "high" : "low"}">` : ""}</span><span class="card-caption"><strong>${escapeHtml(work.title)}</strong></span></button>${imageUrl ? `<button class="view-poster" type="button" data-view-poster="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 작품 크게보기">작품 크게보기 ${icon("arrow-up-right")}</button>` : ""}</div><div class="card-face card-back" ${flipped ? "" : "inert"}><button class="card-back-content" type="button" data-unflip="${escapeHtml(id)}" aria-label="${escapeHtml(work.title)} 앞면 보기"><span class="card-back-number">${String(number).padStart(2, "0")} / WORK</span><span class="card-back-title">${escapeHtml(work.title)}</span><span class="card-back-description">${escapeHtml(work.description)}</span><span class="card-back-hint">${icon("rotate-ccw")} 터치하여 앞면 보기</span></button><div class="card-back-actions">${status === "active" && !voted ? `<button class="vote-button" type="button" data-vote="${escapeHtml(id)}">${icon("vote")}<span class="button-label">이 작품에 투표하기</span></button>` : `<button class="vote-button muted" type="button" data-open-results>${status === "closed" ? "최종 결과 보기" : "실시간 결과 보기"} ${icon("chart-column-increasing")}</button>`}</div></div></div></article>`;
 }
 function syncCardState(previousFocused = null) {
   const item = current();
@@ -197,7 +198,7 @@ function showPoster(id) {
   document.querySelector("#poster-prev").disabled = entries.length < 2;
   document.querySelector("#poster-next").disabled = entries.length < 2;
   posterVote.disabled = votingInProgress || current().status !== "active" || hasVoted(state.exhibitionId);
-  posterVote.textContent = current().status !== "active" ? "투표가 종료되었습니다" : hasVoted(state.exhibitionId) ? "투표 완료" : "투표하기";
+  posterVote.querySelector(".button-label").textContent = current().status !== "active" ? "투표가 종료되었습니다" : hasVoted(state.exhibitionId) ? "투표 완료" : "투표하기";
   document.querySelector("#poster-no-image").hidden = Boolean(original);
   posterImage.hidden = !original;
   posterImage.alt = work.title;
@@ -299,8 +300,9 @@ async function submitVote(workId, button) {
   if (votingInProgress) return;
   if (!id || current()?.status !== "active" || hasVoted(id)) { notify("이 전시회의 투표에 이미 참여했거나 투표가 종료되었습니다."); return; }
   votingInProgress = true;
-  const originalLabel = button.textContent;
-  button.disabled = true; button.textContent = "투표를 반영하고 있습니다…";
+  const buttonLabel = button.querySelector(".button-label") || button;
+  const originalLabel = buttonLabel.textContent;
+  button.disabled = true; buttonLabel.textContent = "투표를 반영하고 있습니다…";
   try {
     await voteFor(id, workId);
     sessionVotes.add(voteKey(id));
@@ -309,7 +311,7 @@ async function submitVote(workId, button) {
     render(); openResults();
     notify(stored ? "투표가 완료되었습니다." : "투표가 완료되었습니다. 이 브라우저에 참여 기록은 저장되지 않았습니다.");
   } catch (error) {
-    button.disabled = false; button.textContent = originalLabel;
+    button.disabled = false; buttonLabel.textContent = originalLabel;
     notify(`투표하지 못했습니다: ${error.message}`);
   } finally {
     votingInProgress = false;
