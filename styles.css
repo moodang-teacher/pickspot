@@ -63,3 +63,4 @@ html{word-break:keep-all}
 .vote-button,.poster-vote-button{justify-content:center}
 .vote-button .lucide-icon,.poster-vote-button .lucide-icon{width:15px;height:15px}
 .card-back-hint .lucide-icon{width:13px;height:13px}
+.result-track{margin-top:10px}
