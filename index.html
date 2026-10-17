@@ -35,6 +35,11 @@
     <div class="poster-dialog-body" id="poster-swipe-area"><button class="poster-arrow" id="poster-prev" type="button" aria-label="이전 작품">←</button><img id="poster-image" alt=""><span class="poster-no-image" id="poster-no-image" hidden>등록된 작품 이미지가 없습니다.</span><button class="poster-arrow" id="poster-next" type="button" aria-label="다음 작품">→</button></div>
     <footer class="poster-dialog-footer"><span id="poster-position" aria-live="polite"></span><button class="poster-vote-button" id="poster-vote" type="button">투표하기</button></footer>
   </section>
+  <div class="vote-confirm-backdrop" id="vote-confirm-backdrop" hidden></div>
+  <section class="vote-confirm-dialog" id="vote-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="vote-confirm-title" hidden>
+    <h2 id="vote-confirm-title">이 작품에 투표하시겠습니까?</h2>
+    <div class="vote-confirm-actions"><button id="cancel-vote" type="button">취소</button><button id="confirm-vote" type="button">확인</button></div>
+  </section>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="app.js"></script>
 </body>

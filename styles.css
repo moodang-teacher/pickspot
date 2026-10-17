@@ -45,3 +45,10 @@ html{word-break:keep-all}
 .poster-vote-button:disabled{background:#5a6578;color:#d8dce4;cursor:default}
 @media(max-width:780px){.home-hero{min-height:260px;padding-top:34px;padding-bottom:16px}.home-hero+.section-block,.home-hero+.demo-banner+.section-block{padding-top:18px}}
 @media(max-width:420px){.home-hero{min-height:250px}.poster-arrow{width:36px;height:36px}#poster-prev{left:7px}#poster-next{right:7px}.poster-vote-button{min-width:130px}}
+.vote-confirm-backdrop{position:fixed;inset:0;z-index:240;background:#020611c9}
+.vote-confirm-dialog{position:fixed;z-index:241;left:50%;top:50%;transform:translate(-50%,-50%);width:min(90vw,390px);padding:26px;border:1px solid #ffffff38;border-radius:14px;background:#f8f7f2;color:#162039;box-shadow:0 20px 70px #0009}
+.vote-confirm-dialog h2{margin:0 0 24px;font-size:19px;line-height:1.5;letter-spacing:-.04em;text-align:center}
+.vote-confirm-actions{display:flex;gap:10px}
+.vote-confirm-actions button{flex:1;padding:12px;border:1px solid #c9ced4;border-radius:7px;background:#fff;color:#263653;font-size:14px;font-weight:800}
+#confirm-vote{border-color:#ffc72c;background:#ffc72c;color:#10172e}
+.vote-confirm-actions button:focus-visible{outline:2px solid #1b2741;outline-offset:2px}

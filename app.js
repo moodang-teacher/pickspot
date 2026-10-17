@@ -9,6 +9,8 @@ const posterDialog = document.querySelector("#poster-dialog");
 const posterBackdrop = document.querySelector("#poster-backdrop");
 const posterImage = document.querySelector("#poster-image");
 const posterVote = document.querySelector("#poster-vote");
+const voteConfirmDialog = document.querySelector("#vote-confirm-dialog");
+const voteConfirmBackdrop = document.querySelector("#vote-confirm-backdrop");
 const toast = document.querySelector("#toast");
 const state = { exhibitions: {}, votes: {}, exhibitionId: null, activeIndex: -1, focused: null, flipped: null, unsubscribeVotes: null, lastFocus: null };
 const sessionVotes = new Set();
@@ -24,6 +26,7 @@ let posterLastFocus = null;
 let posterId = null;
 let posterSwipeStart = null;
 let votingInProgress = false;
+let pendingVote = null;
 
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 const safeImage = value => {
@@ -50,8 +53,8 @@ const exhibitionEntries = () => Object.entries(state.exhibitions).filter(([, exh
 const current = () => state.exhibitions[state.exhibitionId];
 const works = exhibition => Object.entries(exhibition?.works || {}).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
 const dateLabel = timestamp => timestamp ? new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(timestamp) : "";
-const voteKey = id => `hasVoted:${id}`;
-const hasVoted = id => { if (sessionVotes.has(id)) return true; try { return Boolean(localStorage.getItem(voteKey(id))); } catch { return false; } };
+const voteKey = id => `hasVoted:${id}:${state.exhibitions[id]?.voteResetAt || 0}`;
+const hasVoted = id => { const key = voteKey(id); if (sessionVotes.has(key)) return true; try { return Boolean(localStorage.getItem(key)); } catch { return false; } };
 const tag = (status, count) => `<span class="status-pill ${status}">${status === "active" ? "● 투표 진행 중" : "◆ 전시 종료"}</span><span class="work-count">작품 ${count}점</span>`;
 
 function notify(message) { toast.textContent = message; toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("show"), 3600); }
@@ -227,7 +230,29 @@ function closePoster() {
   if (!sheet.classList.contains("open")) document.body.classList.remove("modal-open");
   returnFocus?.focus?.();
 }
+function openVoteConfirm(workId, sourceButton) {
+  const id = state.exhibitionId;
+  if (votingInProgress || !id || current()?.status !== "active" || hasVoted(id)) {
+    notify("이 전시회의 투표에 이미 참여했거나 투표가 종료되었습니다.");
+    return;
+  }
+  pendingVote = { exhibitionId: id, workId, sourceButton };
+  voteConfirmDialog.hidden = false;
+  voteConfirmBackdrop.hidden = false;
+  document.body.classList.add("modal-open");
+  document.querySelector("#cancel-vote").focus();
+}
+function closeVoteConfirm() {
+  if (voteConfirmDialog.hidden) return;
+  const sourceButton = pendingVote?.sourceButton;
+  pendingVote = null;
+  voteConfirmDialog.hidden = true;
+  voteConfirmBackdrop.hidden = true;
+  if (posterDialog.hidden && !sheet.classList.contains("open")) document.body.classList.remove("modal-open");
+  sourceButton?.focus?.();
+}
 async function switchRoute() {
+  closeVoteConfirm();
   closeResults();
   closePoster();
   const next = route();
@@ -263,7 +288,7 @@ app.addEventListener("click", async event => {
   if (unflip) { selectCard(unflip.dataset.unflip); return; }
   const voteButton = event.target.closest("[data-vote]");
   if (voteButton) {
-    await submitVote(voteButton.dataset.vote, voteButton);
+    openVoteConfirm(voteButton.dataset.vote, voteButton);
     return;
   }
   if (event.target.closest("[data-open-results]")) { openResults(); return; }
@@ -278,11 +303,11 @@ async function submitVote(workId, button) {
   button.disabled = true; button.textContent = "투표를 반영하고 있습니다…";
   try {
     await voteFor(id, workId);
-    sessionVotes.add(id);
+    sessionVotes.add(voteKey(id));
     let stored = true;
     try { localStorage.setItem(voteKey(id), workId); } catch { stored = false; }
     render(); openResults();
-    notify(stored ? "투표가 완료되었습니다. 감사합니다!" : "투표는 완료되었지만 이 브라우저에 참여 기록을 저장하지 못했습니다.");
+    notify(stored ? "투표가 완료되었습니다." : "투표가 완료되었습니다. 이 브라우저에 참여 기록은 저장되지 않았습니다.");
   } catch (error) {
     button.disabled = false; button.textContent = originalLabel;
     notify(`투표하지 못했습니다: ${error.message}`);
@@ -334,7 +359,14 @@ document.querySelector("#close-poster").addEventListener("click", closePoster);
 posterBackdrop.addEventListener("click", closePoster);
 document.querySelector("#poster-prev").addEventListener("click", () => stepPoster(-1));
 document.querySelector("#poster-next").addEventListener("click", () => stepPoster(1));
-posterVote.addEventListener("click", () => { if (posterId) submitVote(posterId, posterVote); });
+posterVote.addEventListener("click", () => { if (posterId) openVoteConfirm(posterId, posterVote); });
+document.querySelector("#cancel-vote").addEventListener("click", closeVoteConfirm);
+voteConfirmBackdrop.addEventListener("click", closeVoteConfirm);
+document.querySelector("#confirm-vote").addEventListener("click", () => {
+  const vote = pendingVote;
+  closeVoteConfirm();
+  if (vote && vote.exhibitionId === state.exhibitionId) submitVote(vote.workId, vote.sourceButton);
+});
 document.querySelector("#poster-swipe-area").addEventListener("pointerdown", event => { posterSwipeStart = { x: event.clientX, y: event.clientY, pointerId: event.pointerId }; });
 document.addEventListener("pointerup", event => {
   if (!posterSwipeStart || posterSwipeStart.pointerId !== event.pointerId) return;
@@ -345,6 +377,16 @@ document.addEventListener("pointerup", event => {
 });
 document.addEventListener("pointercancel", () => { posterSwipeStart = null; });
 document.addEventListener("keydown", event => {
+  if (!voteConfirmDialog.hidden) {
+    if (event.key === "Escape") { event.preventDefault(); closeVoteConfirm(); }
+    if (event.key === "Tab") {
+      const controls = [...voteConfirmDialog.querySelectorAll("button")];
+      const index = controls.indexOf(document.activeElement);
+      if (event.shiftKey && index <= 0) { event.preventDefault(); controls.at(-1).focus(); }
+      else if (!event.shiftKey && index === controls.length - 1) { event.preventDefault(); controls[0].focus(); }
+    }
+    return;
+  }
   if (event.key === "Escape" && !posterDialog.hidden) closePoster();
   else if (event.key === "Escape" && !sheet.hidden) closeResults();
   if (!posterDialog.hidden && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); stepPoster(event.key === "ArrowRight" ? 1 : -1); }
