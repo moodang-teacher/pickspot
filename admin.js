@@ -17,6 +17,7 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "
 const thumbnail = path => path.startsWith("assets/works/") ? `assets/work-thumbs/${path.slice("assets/works/".length)}.thumb.webp` : path;
 const announce = text => { message.textContent = text; };
 const shareUrl = id => new URL(`index.html#/e/${encodeURIComponent(id)}`, location.href).href;
+const resultUrl = id => new URL(`result.html?id=${encodeURIComponent(id)}`, location.href).href;
 
 document.addEventListener("error", event => {
   const image = event.target;
@@ -107,7 +108,7 @@ async function loadImageLibrary() {
 
 function renderList() {
   const entries = Object.entries(exhibitions).sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
-  list.innerHTML = entries.length ? entries.map(([id, item]) => `<div class="admin-event"><div class="admin-event-main"><span class="status-pill ${item.status}">${icon(item.status === "draft" ? "circle-dashed" : item.status === "active" ? "circle-dot" : "circle-check")}${item.status === "draft" ? "중간저장" : item.status === "active" ? "투표 진행 중" : "전시 종료"}</span><strong>${escapeHtml(item.title || "제목 없는 전시회")}</strong><small>작품 ${Object.keys(item.works || {}).length}점 · ${new Intl.DateTimeFormat("ko-KR").format(item.startsAt || item.createdAt || Date.now())}</small></div><div class="admin-event-actions"><button type="button" data-edit="${escapeHtml(id)}">${icon("pencil")} 수정</button>${item.status !== "draft" ? `<a href="${shareUrl(id)}" target="_blank" rel="noopener">화면 열기 ${icon("arrow-up-right")}</a><button type="button" data-copy="${escapeHtml(id)}">${icon("copy")} 주소 복사</button>` : ""}${item.status === "active" ? `<button type="button" data-close="${escapeHtml(id)}">투표 종료</button>` : ""}</div></div>`).join("") : `<div class="admin-empty">아직 만든 전시회가 없습니다.</div>`;
+  list.innerHTML = entries.length ? entries.map(([id, item]) => `<div class="admin-event"><div class="admin-event-main"><span class="status-pill ${item.status}">${icon(item.status === "draft" ? "circle-dashed" : item.status === "active" ? "circle-dot" : "circle-check")}${item.status === "draft" ? "중간저장" : item.status === "active" ? "투표 진행 중" : "전시 종료"}</span><strong>${escapeHtml(item.title || "제목 없는 전시회")}</strong><small>작품 ${Object.keys(item.works || {}).length}점 · ${new Intl.DateTimeFormat("ko-KR").format(item.startsAt || item.createdAt || Date.now())}</small></div><div class="admin-event-actions"><button type="button" data-edit="${escapeHtml(id)}">${icon("pencil")} 수정</button>${item.status !== "draft" ? `<a href="${shareUrl(id)}" target="_blank" rel="noopener">화면 열기 ${icon("arrow-up-right")}</a><button type="button" data-copy="${escapeHtml(id)}">${icon("copy")} 주소 복사</button><a class="result-print-link" href="${resultUrl(id)}" target="_blank" rel="noopener">${icon("chart-column-increasing")} 평가결과 출력</a>` : ""}${item.status === "active" ? `<button type="button" data-close="${escapeHtml(id)}">투표 종료</button>` : ""}</div></div>`).join("") : `<div class="admin-empty">아직 만든 전시회가 없습니다.</div>`;
 }
 
 function resetEditor() {

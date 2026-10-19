@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10172e">
+  <title>평가결과 | PickSpot</title>
+  <link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48.png">
+  <link rel="stylesheet" href="result.css">
+</head>
+<body>
+  <div class="result-toolbar" aria-label="평가결과 도구">
+    <a href="admin.html">관리자 페이지로 돌아가기</a>
+    <button id="print-result" type="button" disabled>평가결과 인쇄</button>
+  </div>
+  <main id="result-page" class="result-page" aria-live="polite">
+    <div class="result-loading">평가결과를 불러오는 중입니다.</div>
+  </main>
+  <p class="result-message" id="result-message" role="status"></p>
+  <script type="module" src="result.js"></script>
+</body>
+</html>
